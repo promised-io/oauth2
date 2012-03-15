@@ -30,6 +30,10 @@ define([
   var TEST_JSON_TYPE = /^application\/json(;|$)/;
   var SPLIT_AUTHENTICATE_TOKENS = /(,|\u0020|=|")/;
 
+  // TODO: follow redirect in oauth flow calls
+  // TODO: refresh token
+  // TODO: Unescape WWW-Authenticat evalues
+  // TODO: tests
   return Compose(function(options){
     this.id = options.id;
     this.secret = options.secret;
@@ -317,9 +321,5 @@ define([
         }
       };
     }
-
-// follow redirect in oauth flow calls
-// refresh token
-// shared OAuthError base class
   });
 });
