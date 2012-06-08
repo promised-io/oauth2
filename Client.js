@@ -30,10 +30,62 @@ define([
   var TEST_JSON_TYPE = /^application\/json(;|$)/;
   var SPLIT_AUTHENTICATE_TOKENS = /(,|\u0020|=|")/;
 
+  function extractScheme(scheme, field){
+    var params = {};
+    var hasScheme = false;
+
+    var tokens = lang.filter(field.split(SPLIT_AUTHENTICATE_TOKENS), lang.identity);
+    for(var i = 0, l = tokens.length, p, v; i < l; i++){
+      if(tokens[i] === scheme){
+        // Ignore repeated schemes.
+        if(hasScheme){
+          break;
+        }
+        hasScheme = true;
+        i++; // Skip space
+        continue;
+      }
+
+      if(!hasScheme){
+        continue;
+      }
+
+      if(p){
+        // Bail if the param has no value, it's likely a new scheme.
+        if(tokens[i] !== "="){
+          break;
+        }
+
+        if(tokens[++i] === "\""){
+          v = "";
+          for(i++; i < l; i++){
+            if(tokens[i] === "\""){
+              // FIXME: Unescape octets
+              params[p] = v;
+              p = v = null;
+              break;
+            }else{
+              v += tokens[i];
+            }
+          }
+        }else{
+          // FIXME: Unescape octets
+          params[p] = tokens[i];
+          p = null;
+        }
+      }else if(tokens[i] !== "," && tokens[i] !== " "){
+        p = tokens[i];
+      }
+    }
+
+    return hasScheme ? params : null;
+  }
+
   // TODO: follow redirect in oauth flow calls
   // TODO: refresh token
   // TODO: Unescape WWW-Authenticat evalues
   // TODO: tests
+
   return Compose(function(options){
     this.id = options.id;
     this.secret = options.secret;
@@ -69,64 +121,13 @@ define([
       return endpoint;
     },
 
-    _extractScheme: function(scheme, field){
-      var params = {};
-      var hasScheme = false;
-
-      var tokens = lang.filter(field.split(SPLIT_AUTHENTICATE_TOKENS), lang.identity);
-      for(var i = 0, l = tokens.length, p, v; i < l; i++){
-        if(tokens[i] === scheme){
-          // Ignore repeated schemes.
-          if(hasScheme){
-            break;
-          }
-          hasScheme = true;
-          i++; // Skip space
-          continue;
-        }
-
-        if(!hasScheme){
-          continue;
-        }
-
-        if(p){
-          // Bail if the param has no value, it's likely a new scheme.
-          if(tokens[i] !== "="){
-            break;
-          }
-
-          if(tokens[++i] === "\""){
-            v = "";
-            for(i++; i < l; i++){
-              if(tokens[i] === "\""){
-                // FIXME: Unescape octets
-                params[p] = v;
-                p = v = null;
-                break;
-              }else{
-                v += tokens[i];
-              }
-            }
-          }else{
-            // FIXME: Unescape octets
-            params[p] = tokens[i];
-            p = null;
-          }
-        }else if(tokens[i] !== "," && tokens[i] !== " "){
-          p = tokens[i];
-        }
-      }
-
-      return hasScheme ? params : null;
-    },
-
     _checkBearerErrors: function(response){
       var authenticate = response.headers["www-authenticate"];
       if(!authenticate){
         return response;
       }
 
-      var scheme = this._extractScheme("Bearer", authenticate);
+      var scheme = extractScheme("Bearer", authenticate);
       if(!scheme){
         return response;
       }
