@@ -25,7 +25,22 @@ define([
     _extractFacebookCredentials: function(response){
       return response.body.parseForm();
     },
-    
+
+    constructAuthorizationHref: Compose.around(function(constructAuthorizationHref){
+      return function(kwargs){
+        var href = constructAuthorizationHref.call(this, kwargs);
+        if(kwargs.display){
+          if(~href.indexOf("?")){
+            href += "&";
+          }else{
+            href += "?";
+          }
+          href += "display=" + kwargs.display;
+        }
+        return href;
+      };
+    }),
+
     requestAccessToken: Compose.before(function(kwargs){
       kwargs.extractCredentials = this._extractFacebookCredentials;
     }),
